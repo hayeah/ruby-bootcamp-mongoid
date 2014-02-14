@@ -130,9 +130,12 @@ Also notice that Mongoid uses the `@return` and `@param` annotations to document
 
 There's a rich ecosystem of services for projects hosted on Github.
 
-TravisCI - for continuous integration.
-Coverall - for test converage report.
-CodeClimate - for code health report (complexity & churn).
+![Service Bar](https://www.evernote.com/shard/s20/sh/b8637db6-8ae4-414d-b2c1-811d4c99c267/08ba7ca4df0213b24c296836ec9712b2/res/05f1e37e-9497-48e0-bbe4-ee60c0d3b6ec/skitch.png?resizeSmall&width=832)
+
++ [Yardoc](http://rdoc.info/github/mongoid/mongoid) - API Documentation
++ [TravisCI](http://travis-ci.org/mongoid/mongoid) - for continuous integration.
++ [Coverall](https://coveralls.io/r/mongoid/mongoid?branch=master) - for test converage report.
++ [CodeClimate](https://codeclimate.com/github/mongoid/mongoid) - for code health report (complexity & churn).
 
 TravisCI is especially useful to make sure that the code is correct when there are many people contributing to the project. If you look at a pull request for Mongoid, [#3468](https://github.com/mongoid/mongoid/pull/3468), TravisCI would run the full test suite to make sure that it doesn't break anything. #3468 passes the test:
 
