@@ -367,9 +367,11 @@ X-Poll-Interval: 60
 + What might cause X-Poll-Interval to change?
 + How do you get the second page of events?
 
-# Modelling Github Event (DIY)
+# Exploring events.json
 
-Having seen the Event API, let's model it with Mongoid. Instead of using the live data, let's use [events.json](https://gist.github.com/hayeah/8970697/raw/dac2fabc176d9da0fe7dcde1ab4b61d908b74b23/events.json) so we all have the same data. Before we start modelling the data, it's useful to take a quick look at `events.json` to see what it's like.
+In future lessons we'll use Mongoid to model Github events data.
+
+But instead of using the live data, let's use [events.json](https://gist.github.com/hayeah/8970697/raw/dac2fabc176d9da0fe7dcde1ab4b61d908b74b23/events.json) I've saved so we all have the same data. Before we start modelling the data, it's useful to take a quick look at `events.json` to see what it's like.
 
 We'll use the `jq` command for our initial data exploration.
 
