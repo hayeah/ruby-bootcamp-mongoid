@@ -112,7 +112,7 @@ For example, the `Mongoid.default_session` method has the following API doc,
 #
 # @since 3.0.0
 def default_session
-  "banana"
+  Sessions.default
 end
 ```
 
