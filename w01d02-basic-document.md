@@ -1,7 +1,7 @@
 # Objectives
 
-+ Use Mongoid to model Github Event
-+ Read Mongoid code
++ Use Mongoid to model Github Event.
++ Read Mongoid code.
 + Implement a simple Document model for MyMongoid.
 
 # Model Github Event With Mongoid
@@ -89,9 +89,11 @@ event = Event.new(data) do |event|
 end
 ```
 
-We'll implement the same thing.
+Today we'll implement this part of Mongoid.
 
 # Mongoid Implementation
+
+Take a look at some of the relevant Mongoid code:
 
 + Model initialization is in [`Mongoid::Document`](https://github.com/hayeah/mongoid/blob/5b0f031992cbec66d68c6cb288a4edb952ed5336/lib/mongoid/document.rb#L103)
   + in particular, look at [`process_attributes`](https://github.com/hayeah/mongoid/blob/5b0f031992cbec66d68c6cb288a4edb952ed5336/lib/mongoid/attributes/processing.rb#L8-L18)
@@ -107,13 +109,15 @@ Here's a high-level overview of what we'll do.
 + Implement the `field` keyword as a class method.
 + The `field` class method should generate setters and getters for attributes.
 
-I've broken the work down into small steps, and each step has a corresponding RSpec test to make that sure you got it right.
+# Test-First Development
 
-We'll do today's work test-first. Before you start working on a step, you should run the corresponding test to see that it fails. Then you should work on it to make the test pass. Move on to the next step after the test passes.
+I've broken the work down into small steps, and each step has a corresponding RSpec test to make sure that you got it right.
+
+We'll do today's work test-first. Before you start working on a step, you should run the corresponding test to see that it fails. Then you should work on it to make the test pass. Move on to the next step after the test passes. This is called the ["Red, Green, Refactor Cycle"](http://blog.goyello.com/2011/09/13/red-green-refactor-cycle/)
 
 For now, we won't do refactoring. Just go through the steps as simply as you can.
 
-# Running The Test Suite
+### Running The Test Suite
 
 First clone the test suite into your `my_mongoid` project directory:
 
@@ -128,7 +132,7 @@ You need to run the spec from within the `my_mongoid/my_mongoid_spec` directory,
 > cd my_mongoid_spec
 ```
 
-Run a spec to see if it's working:
+Then run a spec to see if it's working:
 
 ```bash
 > rspec version_spec.rb
