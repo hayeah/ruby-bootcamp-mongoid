@@ -1,34 +1,33 @@
 # Writing RSpec
 
 RSpec is the test framework that I've seen most often in different projects.
-It's harder to learn than others test frameworks. But since many projects use
-it, you'd have to learn to read and write RSpec whether you like it or not.
+It's harder to learn than others test frameworks. But since many companies and
+projects use it, learning it is good for you.
 
 [@dhh doesn't like RSpec](https://twitter.com/dhh/status/52807321499340800)
 
-If you want something simpler, you might try
-
-[Test::Unit](http://www.ruby-doc.org/stdlib-2.1.0/libdoc/test/unit/rdoc/Test/Unit.html)
-
-Which is a Ruby standard library, and used by the Rails project.
+If you want something simpler, you might try [Test::Unit](http://www.ruby-doc.org/stdlib-2.1.0/libdoc/test/unit/rdoc/Test/Unit.html), which is a Ruby standard library, and used by the Rails project.
 
 ## Objectives
 
 You'll learn:
 
-+ How RSpec files in the `spec` directory is organized.
++ How RSpec files in the `spec` directory are organized.
 + How an RSpec file is structured.
 + Write your own RSpec.
 + Setup TravisCI for your project.
-+ Setup Coverall for your project.
 
 Read [An Introduction To RSpec](http://blog.teamtreehouse.com/an-introduction-to-rspec) before you continue.
 
 Note that the `should` syntax is deprecated in RSpec 3. Use expectation syntax: [rspec-expectation](https://github.com/rspec/rspec-expectations).
 
+#### Optional
+
 If you are familiar with RSpec 2, you might want to read about how how RSpec 3 is different: [The Plan for RSpec 3](http://myronmars.to/n/dev-blog/2013/07/the-plan-for-rspec-3).
 
 # How Spec Files Are Organized
+
+Let's look at Mongoid's RSpec test suite.
 
 When you run the `rspec` command, it looks in the `spec` directory for all files that matches the pattern `*_spec.rb`.
 
@@ -119,13 +118,15 @@ spec/mongoid/reloadable_spec.rb
 37:        Account.find(account.id).tap do |acc|
 ```
 
-Mongoid does a very good job at breaking implementation into modules. The organization of spec files mirrors the source files by a naming convention. The spec file for "foo.rb" should correspond to "foo_spec.rb". For examples:
+### Each module should have its own spec file
+
+Mongoid does a very good job at breaking implementation into modules. The organization of spec files mirrors the source files by a naming convention. The spec file for "foo.rb" should be "foo_spec.rb". For example:
 
 + `lib/mongoid/document.rb` and `spec/mongoid/document_spec.rb`
 + `lib/mongoid/attributes/readonly.rb` and `spec/mongoid/attributes/readonly_spec.rb`
 
 
-# Spec Helper
+# spec_helper.rb
 
 Let's look at what spec_helper does.
 
@@ -139,7 +140,7 @@ MODELS = File.join(File.dirname(__FILE__), "app/models")
 $LOAD_PATH.unshift(MODELS)
 ```
 
-Later, sets up autoload for all test models:
+Later, it sets up autoload for all test models:
 
 ```ruby
 # Autoload every model for the test suite that sits in spec/app/models.
@@ -149,9 +150,11 @@ Dir[ File.join(MODELS, "*.rb") ].sort.each do |file|
 end
 ```
 
-Autoloading loads `account.rb` the first time Account is used. This avoids loading all the test models if you only want to run one test.
+The file `account.rb` is loaded only when Account is first used. This avoids loading all the test models if you only want to run one test.
 
-Before each running each test, delete everything in Mongo:
+#### Database Cleaning
+
+Before each running each test, should delete test data in MongoDB:
 
 ```ruby
 RSpec.configure do |config|
@@ -161,6 +164,8 @@ RSpec.configure do |config|
   end
 end
 ```
+
+#### Coverage Report
 
 The `spec_helper` also sets up coverage report when it's running on TravisCI:
 
@@ -333,7 +338,7 @@ end
 + Within a spec file, the test groups mirror the structure of the module.
 + By using nesting context to manage scope, your spec can be very [DRY](http://en.wikipedia.org/wiki/Don't_repeat_yourself).
 
-# Writing Spec for MyMongoid
+# Writing Spec for MyMongoid (DIY)
 
 ## Init RSpec
 
@@ -397,7 +402,7 @@ end
 
 Now run rspec:
 
-```sh
+```
 > rspec
 /Users/howard/workspace/rubybootcamp-mongoid/my_mongoid/spec/my_mongoid/document_spec.rb:1:in `<top (required)>': uninitialized constant MyMongoid::Document (NameError)
         from /Users/howard/.rvm/gems/ruby-1.9.3-p484/gems/rspec-core-3.0.0.beta1/lib/rspec/core/configuration.rb:886:in `load'
@@ -413,9 +418,8 @@ Now run rspec:
 
 It should now work:
 
-```
-> sh
-rspec --format doc
+``` sh
+> rspec --format doc
 MyMongoid::Document
   is a module
 
@@ -426,9 +430,9 @@ Finished in 0.00102 seconds
 2 examples, 0 failures
 ```
 
-## Complete the Spec
+## Complete the Test Suite
 
-Now you should finish writing the spec on your own. Remember, your spec should follow the structure of your module. So `document_spec.rb` might look like:
+Finish writing the spec on your own. Remember, your spec should follow the structure of your module. So `document_spec.rb` might look like:
 
 ```ruby
 describe MyMongoid::Document do
@@ -469,7 +473,7 @@ Add the build status image to your `README.md`:
 [![Build Status]](https://travis-ci.org/{your_github_account}/my_mongoid)
 ```
 
-Commit and push. TravisCI should start building.
+Commit and push. TravisCI should start building. Every time you push to the repository, TravisCI would start a new build.
 
 # Bonus
 
