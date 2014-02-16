@@ -156,12 +156,12 @@ end
 In this step, you'll implement the `MyMongoid::Document` mixin to turn a class into a MyMongoid model.
 
 + Create two empty modules: `MyMongoid::Document` and `MyMongoid::Document::ClassMethods`
-  + run `rspec -e 'Document modules'`
+  + run `rspec declare_model_spec.rb -e 'Document modules'`
 + A class should includes `MyMongoid::Document` to become a MyMongoid model.
 + `is_mongoid_model?` should be true for all MyMongoid models.
-  + run `rspec -e 'Event is a mongoid model'`
+  + run `rspec declare_model_spec.rb -e 'Event is a mongoid model'`
 + `MyMongoid.models` should be a method that returns all MyMongoid models.
-  + run `rspec -e 'maintains a list of models'`
+  + run `rspec declare_model_spec.rb -e 'maintains a list of models'`
 
 Commit your work.
 
@@ -179,20 +179,20 @@ foo = Foo.new({"a" => 10, "b" => 20})
 Let's implement attributes for a model.
 
 + Should be able to initialize a Mongoid model with attributes, which is a Hash object.
-  + `rspec -e 'can instantiate a model with attributes'`
+  + `rspec declare_model_spec.rb -e 'can instantiate a model with attributes'`
 + Should throw `ArgumentError` if the argument for "#new" is not a Hash object.
-  + `rspec -e 'throws an error if attributes it not a Hash'`
+  + `rspec declare_model_spec.rb -e 'throws an error if attributes it not a Hash'`
 + Should be able to get the attributes object with the `#attributes` method.
-  + `rspec -e 'can read the attributes of model'`
+  + `rspec declare_model_spec.rb -e 'can read the attributes of model'`
 + Should be able to get an attribute with the method `#read_attribute(name)`
-  + `rspec -e "can get an attribute with #read_attribute"`
+  + `rspec declare_model_spec.rb -e "can get an attribute with #read_attribute"`
 + Should be able to set an attribute with the method `#write_attribute(name,value)`
-  + `rspec -e "can set an attribute with #write_attribute"`
+  + `rspec declare_model_spec.rb -e "can set an attribute with #write_attribute"`
 
 When we instantiate a model, it should be a new record.
 
 + `#new_record?` should return true for a newly initialized record.
-  + `rspec -e "is a new record initially"`
+  + `rspec declare_model_spec.rb -e "is a new record initially"`
 
 Since there is no way to `save` or `find` yet, a record would always be a new_record. Just make "#new_record?" return `true`, so there is the minimum amount of code possible to pass the test.
 
