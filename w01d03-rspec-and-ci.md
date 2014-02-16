@@ -434,6 +434,8 @@ Finished in 0.00102 seconds
 
 Finish writing the spec on your own. Remember, your spec should follow the structure of your module. So `document_spec.rb` might look like:
 
+[Documentation for writing expectations](https://github.com/rspec/rspec-expectations).
+
 ```ruby
 describe MyMongoid::Document do
   describe ".new"
