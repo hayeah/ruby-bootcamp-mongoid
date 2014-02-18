@@ -256,6 +256,7 @@ Now that we can declare fields, let's implement mass-assignment by using field s
   + `rspec declare_field_spec.rb -e "use field setters for mass-assignment"`
 + Should raise `MyMongoid::UnknownAttributeError` if the attributes Hash contains undeclared fields.
   + `rspec declare_field_spec.rb -e 'raise MyMongoid::UnknownAttributeError if the attributes Hash contains undeclared fields.'`
+  + This change would break tests in `declare_model_spec.rb`. It's ok.
 + Make `#attributes=` an alias of `#process_attributes`
   + `rspec declare_field_spec.rb -e 'aliases #process_attributes as #attribute='`
 + Change `#initialize` to use `#process_attributes` instead of assigning to attribute directly.
@@ -281,7 +282,7 @@ foo.a = 1
 foo.apple # => 1
 ```
 
-In Mongoid, if you set the "id" attribute of a model, it actually sets the "_id" attribute. This is accomplished by field aliases. By default, a Mongoid model would have "id" as an alias of "_id". (see [Mongoid::Fields](https://github.com/hayeah/mongoid/blob/5b0f031992cbec66d68c6cb288a4edb952ed5336/lib/mongoid/fields.rb#L42))
+In Mongoid, if you set the `id` attribute of a model, it actually sets the `_id` attribute. This is accomplished by field aliases. By default, a Mongoid model would have "id" as an alias of "_id". (see [Mongoid::Fields](https://github.com/hayeah/mongoid/blob/5b0f031992cbec66d68c6cb288a4edb952ed5336/lib/mongoid/fields.rb#L42))
 
 + The `field` DSL should accept a hash as options.
   + `rspec declare_field_spec.rb -e 'accepts hash options for the field keyword'`
