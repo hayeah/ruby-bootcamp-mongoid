@@ -225,41 +225,242 @@ Trying to find it again, it would raise an error:
 Mongoid::Errors::DocumentNotFound
 ```
 
-# BSON
+# How Mongoid Implements CRUD
+
+Mongoid uses [Moped](https://github.com/mongoid/moped) to communicate with MongoDB. Moped is responsible of
+
++ Serialization of Ruby objects to [BSON (MongoDB's serialization format)](http://bsonspec.org)
++ Managing connections to one or many MongoDB databases
++ Creating queries to MongoDB, using the [MongoDB wire protocol](http://docs.mongodb.org/meta-driver/latest/legacy/mongodb-wire-protocol)
 
 
+## Creating A Record
 
+Let's investigate how Mongoid creates a document。 What happens when you call `Event.create(data)`? Eventually, the `create` call goes to [Mongoid::Persistable::Creatable#insert_as_root](https://github.com/hayeah/mongoid/blob/5b0f031992cbec66d68c6cb288a4edb952ed5336/lib/mongoid/persistable/creatable.rb#L78-L80):
+
+```ruby
+# Insert the root document.
 #
+# @api private
+#
+# @example Insert the document as root.
+#   document.insert_as_root
+#
+# @return [ Document ] The document.
+#
+# @since 4.0.0
+def insert_as_root
+  collection.insert(as_document)
+end
+```
 
-{just focus on find, create, update_attribute, delete. ignore upsert.}
+**Exercise**: Can you read the Mongoid source to follow it from `create` to `insert_as_root`? Use `ack` to find where methods are.
 
-+ create MyMongoid.setup(options)
-+ configure spec_helper
-+ use lsof to find port of mongo, and use tcpdump to listen to it.
-+ to_bson
-+ add moped as dependency to Gemfile
-+ configuring the db connection
-+ create connection to mongo. use it directly for experiments.
+Let's look at the `#insert_as_root` method:
 
-+ show source code from Moped, detailing the wire protocol.
-++ good to illustrate the use of metaprogramming to define DSL
+What's the `#collection` method?
 
-+ show binary data of to_bson, then show it on the wire
+```ruby
+[18] pry(main)> event = Event.new(data)
+=> #<Event ...>
+[19] pry(main)> event.collection
+=> #<Moped::Collection:0x007f98235000b0
+ @database=
+  #<Moped::Database:0x007f98235001f0
+   @name="my_mongoid",
+   @session=
+    <Moped::Session seeds=[<Moped::Node resolved_address="127.0.0.1:27017">] database=my_mongoid>>,
+ @name="events">
+```
 
-+ compare & contrast with redis' plain text protocol
-++ cite http as an example of plain text protocol. why plain text is awesome.
-++ cite joe armstrong's binary format, why it's awesome.
+So `collection` is a `Moped::Collection`, connecting to the database "my_mongoid".
 
+What does the `#as_document` method do?
 
-+ dissect bson format. compare to other serialization format.
-+ eavedrop on mongo wire protocol, tcpdump
+```ruby
+[27] pry(main)> doc = event.as_document
+=> {"_id"=>"1978774765",
+ "type"=>"PushEvent",
+ "actor"=>
+  {"id"=>382747,
+   "login"=>"andrepl",
+   "gravatar_id"=>"411d2b4791a8de51f98666e93e9f1fde",
+   "url"=>"https://api.github.com/users/andrepl",
+   "avatar_url"=>
+    "https://gravatar.com/avatar/411d2b4791a8de51f98666e93e9f1fde?d=https%3A%2F%2Fa248.e.akamai.net%2Fassets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png&r=x"},
+ "repo"=>
+  {"id"=>16670304,
+   "name"=>"andrepl/andrepl.github.io",
+   "url"=>"https://api.github.com/repos/andrepl/andrepl.github.io"},
+ "payload"=>
+  {"push_id"=>307955115,
+   "size"=>1,
+   "distinct_size"=>1,
+   "ref"=>"refs/heads/master",
+   "head"=>"9487ef037120e52091bd5f59d4e2fc983188035f",
+   "before"=>"ceac7512abbc515f90797ebb5644b7ced52588be",
+   "commits"=>
+    [{"sha"=>"9487ef037120e52091bd5f59d4e2fc983188035f",
+      "author"=>
+       {"email"=>"andre.leblanc@webfilings.com", "name"=>"Andre LeBlanc"},
+      "message"=>"more style",
+      "distinct"=>true,
+      "url"=>
+       "https://api.github.com/repos/andrepl/andrepl.github.io/commits/9487ef037120e52091bd5f59d4e2fc983188035f"}]},
+ "public"=>true,
+ "created_at"=>"2014-02-13T03:20:37Z"}
+[28] pry(main)> doc.class
+=> Hash
+```
 
+`#as_document` turns the `event` record into an ordinary Ruby hash. The only
+`#thing special about this hash object is that it is "Mongo Friendly", which
+`#means that it can be converted to BSON (the MongoDB serialization format).
 
-+ dirty tracking (don't think this is super interesting, maybe as an optional exercise)
-+ I think I'd like to keep this
+You can try to convert a few objects to BSON:
 
-{implementation wise, this is actually pretty easy. just use moped}
+```ruby
+[2] pry(main)> 10.to_bson
+=> "\n\x00\x00\x00"
+[3] pry(main)> 20.to_bson
+=> "\x14\x00\x00\x00"
+[4] pry(main)> 1.to_bson
+=> "\x01\x00\x00\x00"
+[5] pry(main)> 2.to_bson
+=> "\x02\x00\x00\x00"
+[6] pry(main)> "Hello Mongo".to_bson
+=> "\f\x00\x00\x00Hello Mongo\x00"
+[8] pry(main)> ["Hello Mongo",1].to_bson
+=> "\x1F\x00\x00\x00\x020\x00\f\x00\x00\x00Hello Mongo\x00\x101\x00\x01\x00\x00\x00\x00"
+[10] pry(main)> {"Hello" => "Mongo"}.to_bson
+=> "\x16\x00\x00\x00\x02Hello\x00\x06\x00\x00\x00Mongo\x00\x00"
+```
 
-+ what if a record is a new_record, and we call update_attributes?
-+ what's the difference between upsert and create?
+When you call `create`, Mongoid passes to Moped a Ruby hash that can be
+seralized into BSON. Then Moped communicates with MongoDB to insert the
+data as a BSON document.
 
+# Using Moped Directly
+
+Using Mongoid is like using ActiveRecord, and using Moped is like using SQL.
+
+Mongoid's [Documentation for Persistence](http://mongoid.org/en/mongoid/docs/persistence.html) has a table that corresponds Mongoid CRUD to Moped queries. For example:
+
+`Model.create`
+
+```ruby
+# Mongoid
+Person.create(
+  first_name: "Heinrich",
+  last_name: "Heine"
+)
+
+# Moped
+collections[:people].insert({
+  first_name: "Heinrich",
+  last_name: "Heine"
+})
+```
+
+`Model#update_attributes`
+
+```ruby
+# Mongoid
+person.update_attributes(
+  first_name: "Jean",
+  last_name: "Zorg"
+)
+
+# Moped
+person.update_attributes(
+  first_name: "Jean",
+  last_name: "Zorg"
+)
+```
+
+`Model#delete`
+
+```ruby
+# Mongoid
+person.delete
+
+#  Moped
+collections[:people].find(...).remove
+```
+
+# Playing With Moped
+
+Let's try to interact with MongoDB using Moped.
+
+Getting the events collection：
+
+```
+[25] pry(main)> events = Mongoid.default_session[:events]
+=> #<Moped::Collection:0x007faa448eb7a0
+ @database=
+  #<Moped::Database:0x007faa44936598
+   @name="my_mongoid",
+   @session=
+    <Moped::Session seeds=[<Moped::Node resolved_address="127.0.0.1:27017">] database=my_mongoid>>,
+ @name="events">
+```
+
+Insert a record into Mongo:
+
+```ruby
+[54] pry(main)> data = {"_id" => "1", "payload" => "aaaa"}
+[55] pry(main)> events.insert(data)
+=> {"n"=>0, "connectionId"=>133, "err"=>nil, "ok"=>1.0}
+```
+
+To get the record from MongoDB:
+
+```ruby
+[57] pry(main)> events.find({"_id" => "1"}).first
+=> {"_id"=>"1", "payload"=>"aaaa"}
+```
+
+Remember that `id` is a Mongoid alias for `_id`. It wouldn't work if you try to find a record with `id`:
+
+```ruby
+[70] pry(main)> events.find({"id" => "1"}).first
+=> nil
+```
+
+To update the record we've created:
+
+```ruby
+[65] pry(main)> c.update("$set" => {"payload" => "bbbb"})
+=> {"updatedExisting"=>true, "n"=>1, "connectionId"=>133, "err"=>nil, "ok"=>1.0}
+[66] pry(main)> events.find({"_id" => "1"}).first
+=> {"_id"=>"1", "payload"=>"bbbb"}
+```
+
+It should raise an error if you try to insert another record with the same `_id`:
+
+```ruby
+[61] pry(main)> data = {"_id" => "1", "payload" => "cccc"}
+=> {"_id"=>"1", "payload"=>"cccc"}
+[62] pry(main)> events.insert(data)
+Moped::Errors::OperationFailure: The operation: #<Moped::Protocol::Command
+  @length=74
+  @request_id=40
+  @response_to=0
+  @op_code=2004
+  @flags=[]
+  @full_collection_name="my_mongoid.$cmd"
+  @skip=0
+  @limit=-1
+  @selector={:getlasterror=>1, :w=>1}
+  @fields=nil>
+failed with error 11000: "E11000 duplicate key error index: my_mongoid.events.$_id_  dup key: { : \"1\" }"
+```
+
+To delete the record:
+
+```ruby
+[68] pry(main)> events.find({"_id" => "1"}).remove
+=> {"n"=>1, "connectionId"=>133, "err"=>nil, "ok"=>1.0}
+[69] pry(main)> events.find({"_id" => "1"}).count
+=> 0
+```
