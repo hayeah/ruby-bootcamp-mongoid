@@ -1,15 +1,11 @@
-# Persistence And CRUD
+# Persistence And Mongoid CRUD
 
-We've created a simple document model in Ruby. In this lesson, you'll learn how to save that object into MongoDB.
-
-You'll implement Create, Read, Update, Delete for MyMongoid.
+In this lesson you'll learn how Mongoid saves a record into MongoDB.
 
 ## Objectives
 
 + Learn BSON, Mongoid's serialization format.
 + Understand Moped, the Ruby MongoDB driver.
-+ Create a singleton connection object to handle DB queries.
-+ Implement CRUD for MyMongoid
 
 # Mongoid CRUD
 
