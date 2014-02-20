@@ -114,18 +114,40 @@ We won't implement multiple sessions in MyMongoid, so `MyMongoid.session`. In la
 
 ## Implementation
 
-Should be able to configure `MyMongoid`:
-
-+ `MyMongoid::Configuration` should be a singleton class.
-+ `MyMongoid::Configuration` should have `#host` and `#database` accessors.
-+ `MyMongoid.configuration` should return the `MyMongoid::Configuration` singleton.
-+ `MyMongoid.configure` should yield `MyMongoid.configuration` to a block.
-
-Should be able to get database session:
-
-+ `MyMongoid.session` should return a `Moped::Session`
+Implement `Mongoid.configure`.
 
 Hint: use the `Singleton` module in Ruby stdlib.
+
+Pass `rspec crud_spec.rb -e 'Should be able to configure MyMongoid'`
+
+```
+Should be able to configure MyMongoid:
+  MyMongoid::Configuration
+    should be a singleton class
+    should have #host accessor
+    should have #database accessor
+  MyMongoid.configuration
+    should return the MyMongoid::Configuration singleton
+  MyMongoid.configure
+    should yield MyMongoid.configuration to a block
+```
+
+Implement `Mongoid.session`.
+
+Pass `rspec crud_spec.rb -e 'Should be able to get database session'`
+
+Hint: Look at the API doc for [`Moped::Session`](https://github.com/mongoid/moped/blob/09b9d91f9204486c56b0e2c69377dffad56dc852/lib/moped/session.rb#L11-L32)
+Hint: [The Basics of Ruby Memoization](http://gavinmiller.io/2013/basics-of-ruby-memoization)
+
+```
+Should be able to get database session:
+  MyMongoid.session
+    should return a Moped::Session
+    should memoize the session @session
+    should raise MyMongoid::UnconfiguredDatabaseError if host and database are not configured
+```
+
+
 
 #### Singleton Object
 
@@ -165,7 +187,7 @@ end
 
 You can get the `AppConfig` singleton with the `AppConfig.instance` method:
 
-```ruby
+```
 [4] pry(main)> AppConfig.instance
 => #<AppConfig:0x007fb47c834658>
 [5] pry(main)> AppConfig.instance
@@ -174,7 +196,7 @@ You can get the `AppConfig` singleton with the `AppConfig.instance` method:
 
 However, calling `new` would be an error:
 
-```ruby
+```
 [6] pry(main)> AppConfig.new
 NoMethodError: private method `new' called for AppConfig:Class
 ```
@@ -185,19 +207,14 @@ Singleton is useful when you want only one thing in your program. For example:
 + Singleton object memory cache
 + Singleton logger
 
+# Create
 
-# Collection
+new_record?
 
 Event.collection
 Event
 
-# Serialization
-
 to_bson
-
-# Create
-
-new_record?
 
 # Find
 
