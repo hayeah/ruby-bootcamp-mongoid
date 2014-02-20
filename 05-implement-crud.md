@@ -110,13 +110,13 @@ After MyMongoid is configured, we should be able to get the database session:
 MyMongoid.session
 ```
 
-We won't implement multiple sessions in MyMongoid, so `MyMongoid.session`. In later sections, a `MyMongoid` model will get a `Moped::Collection` from the session, and issue queries via the collection.
+We won't implement multiple sessions in MyMongoid. In later sections, a `MyMongoid` model will get a `Moped::Collection` from the session, and issue queries via the collection.
 
 ## Implementation
 
 Implement `Mongoid.configure`.
 
-Hint: use the `Singleton` module in Ruby stdlib.
+Hint: use the [`Singleton` module](http://ruby-doc.org/stdlib-2.1.0/libdoc/singleton/rdoc/Singleton.html) in Ruby stdlib. See the section "Singleton Object" below.
 
 Pass `rspec crud_spec.rb -e 'Should be able to configure MyMongoid'`
 
@@ -131,6 +131,7 @@ Should be able to configure MyMongoid:
   MyMongoid.configure
     should yield MyMongoid.configuration to a block
 ```
+Commit your work.
 
 Implement `Mongoid.session`.
 
@@ -147,7 +148,7 @@ Should be able to get database session:
     should raise MyMongoid::UnconfiguredDatabaseError if host and database are not configured
 ```
 
-
+Commit your work.
 
 #### Singleton Object
 
@@ -207,28 +208,104 @@ Singleton is useful when you want only one thing in your program. For example:
 + Singleton object memory cache
 + Singleton logger
 
-# Create
+# MyMongoid.create (DIY)
 
-new_record?
+To create a new record we'll first use `MyMongoid.session` to get a model's collection, then issue the `insert` query to the model's collection. A model's collection is a `Moped::Collection`.
 
-Event.collection
-Event
+For the `Event` model, `Event.create(doc)` is roughly like:
 
-to_bson
+```
+event = Event.new(doc)
+MyMongoid.session.collections[:events].insert(event.to_document)
+event.new_record? # => false
+```
+
+Pass `rspec crud_spec.rb -e 'model collection'`
+
+Hint: Use [ActiveSupport's tableize](http://api.rubyonrails.org/classes/ActiveSupport/Inflector.html#method-i-tableize) to convert a class name like "Event" to collection name "events". (Add version 3.0.0 as dependency to your gemspec.) `require "active_support/inflector"`
+Hint: Use [`Moped::Session#[]`](https://github.com/mongoid/moped/blob/master/lib/moped/session.rb#L42-L51) to get a collection by name.
+
+```
+Should be able to create a record:
+  model collection:
+    Model.collection_name
+      should use active support's titleize method
+    Model.collection
+      should return a model's collection
+```
+
+As you've seen before, the `insert` query takes an ordinary Ruby hash:
+
+```ruby
+collections[:people].insert({
+  first_name: "Heinrich",
+  last_name: "Heine"
+})
+```
+
+So `#to_document` just need to return `#attributes`; it doesn't need to do anything special. We assume that `#attributes` can be converted to bson by calling `#to_bson`.
+
+Pass `rspec crud_spec.rb -e '#to_document'`
+
+```
+Should be able to create a record:
+  #to_document
+    should be a bson document
+```
+
+`#create` should initialize a new record, then call `#save`, then return the saved record.
+
+Pass `rspec crud_spec.rb -e 'Model#save'`
+
+```
+Should be able to create a record:
+  Model#save
+    successful insert:
+      should insert a new record into the db
+      should return true
+      should make Model#new_record return false
+```
+
+Then pass `rspec crud_spec.rb -e 'Model.create'`
+
+```
+Should be able to create a record:
+  Model.create
+    should return a saved record
+```
+
+Commit.
+
+## Automatically Generated ObjectId
+
+If you try to save a record and it has no `_id`, then we should generate a random id before we insert it into the db.
+
+Hint: use `BSON::ObjectId.new` to generate an [uuid](http://en.wikipedia.org/wiki/Universally_unique_identifier).
+
+Pass: `rspec crud_spec.rb -e 'saving a record with no id'`
+
+```
+Should be able to create a record:
+  saving a record with no id
+    should generate a random id
+```
+
+Commit.
 
 # Find
 
 Event.find("abc") == Event.find({"_id" => "abc"})
 
-# Save
-
-dirty_tracking
-
 # Update
 
-event.update_attributes({})
+event.update_attributes({}) # use $set
 
 should do mass-assignment first
+
+# Save
+
+Model.dirty_fields
+dirty_tracking. hook into write_attribute. reset @dirty_fields upon save.
 
 # Delete
 
