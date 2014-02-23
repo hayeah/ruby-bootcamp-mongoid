@@ -1,7 +1,20 @@
 # Implement MyMongoid CRUD
 
 + Create a singleton connection object to handle DB queries.
-+ Implement CRUD for MyMongoid
++ Implement `#create` and `#find`
+
+Please follow TDD when you do this assignment. You may reuse the assignment's test cases in your test suite. Remember, you should fail a test first before you code.
+
+## Working With Your Partner
+
+Fork your study partner's my_mongoid repo, and do your assignment there.
+
++ If you notice bugs, you should fix them and create pull requests (each bug should be fixed in a branch, and have its own pull request).
++ You should negotiate with your partner to decide how much tests you'll write.
++ Follow the [Github Ruby styleguide](https://github.com/styleguide/ruby)
++ Don't read your partner's code until you are done.
++ Review the your partner's pull request. If it's good, accept it. If it's not good enough, say why and ask your partner to fix it.
++ **Be kind and helpful** if your partner's code is terrible :)
 
 # Add Moped As Gem Dependency
 
@@ -40,7 +53,7 @@ Commit your change to gemspec. We are ready to start.
 
 The first thing we need to do is to provide a way to configure MyMongoid, so it knows how it can connect to MongoDB.
 
-We'll implement a very common configuration pattern in Ruby:
+We'll configure MyMongoid this way:
 
 ```ruby
 MyMongoid.configure do |config|
@@ -48,16 +61,6 @@ MyMongoid.configure do |config|
   config.host = "localhost:27017"
 end
 ```
-
-Then we should be able to get the database session:
-
-```ruby
-MyMongoid.session
-```
-
-We won't implement multiple sessions in MyMongoid, so `MyMongoid.session` is a _singleton_ of `Moped::Session`. In later sections, the model will get a `Moped::Collection` from the session, and issue queries via the collection.
-
-
 
 # MongoDB Session Configuration (DIY)
 
@@ -89,7 +92,7 @@ RSpec.configure do |config|
 end
 ```
 
-The benefit of having a configuration object over plain Ruby hash is that all the configurations are well defined methods. If you misconfigure, the configuration object would have a chance to report error. For example:
+The benefit of having a configuration object over plain Ruby hash is that all the configurations are well defined methods. If your user misconfigures, the configuration object would have a chance to report error. For example:
 
 ```
 MyMongoid.configure do |config|
@@ -106,9 +109,9 @@ MyMongoid.session
 
 We won't implement multiple sessions in MyMongoid. In later sections, a `MyMongoid` model will get a `Moped::Collection` from the session, and issue queries via the collection.
 
-## Implementation
+## Implement Configuration
 
-Implement `Mongoid.configure`.
+**Implement** `Mongoid.configure`.
 
 Hint: use the [`Singleton` module](http://ruby-doc.org/stdlib-2.1.0/libdoc/singleton/rdoc/Singleton.html) in Ruby stdlib. See the section "Singleton Object" below.
 
@@ -127,7 +130,7 @@ Should be able to configure MyMongoid:
 ```
 Commit your work.
 
-Implement `Mongoid.session`.
+**Implement** `Mongoid.session`.
 
 Pass `rspec crud_spec.rb -e 'Should be able to get database session'`
 
@@ -196,23 +199,28 @@ However, calling `new` would be an error:
 NoMethodError: private method `new' called for AppConfig:Class
 ```
 
-Singleton is useful when you want only one thing in your program. For example:
+Singleton is useful when you want one and only one instance in your program. For example:
 
 + Singleton database connections pool.
 + Singleton object memory cache
 + Singleton logger
 
-# MyMongoid.create (DIY)
+Exercise: read the source code of [`singleton.rb`](https://github.com/ruby/ruby/blob/ba5ed845b30c81fbf92c052b83f54198cd272bbd/lib/singleton.rb)
+
+# Implement Create
 
 To create a new record we'll first use `MyMongoid.session` to get a model's collection, then issue the `insert` query to the model's collection. A model's collection is a `Moped::Collection`.
 
-For the `Event` model, `Event.create(doc)` is roughly like:
+For the `Event` model, what `Event.create(doc)` would do is roughly:
 
 ```
+# This is pseudo code!
 event = Event.new(doc)
 MyMongoid.session.collections[:events].insert(event.to_document)
 event.new_record? # => false
 ```
+
+**Implement** `Model#collection` to return the collection for a model.
 
 Pass `rspec crud_spec.rb -e 'model collection'`
 
@@ -227,6 +235,8 @@ Should be able to create a record:
     Model.collection
       should return a model's collection
 ```
+
+**Implement** `#to_document` to "serialize" a model, so it can be saved in MongoDB.
 
 As you've seen before, the `insert` query takes an ordinary Ruby hash:
 
@@ -247,7 +257,7 @@ Should be able to create a record:
     should be a bson document
 ```
 
-`#create` should initialize a new record, then call `#save`, then return the saved record.
+**Implement** `#create` to initialize a new record, then call `#save`, then return the saved record.
 
 Pass `rspec crud_spec.rb -e 'Model#save'`
 
@@ -272,7 +282,9 @@ Commit.
 
 ## Automatically Generated ObjectId
 
-If you try to save a record and it has no `_id`, then we should generate a random id before we insert it into the db.
+If you try to save a record and it has no `_id`, then we should generate an id before we insert it into the db.
+
+**Implement** automatically generate an id.
 
 Hint: use `BSON::ObjectId.new` to generate an [uuid](http://en.wikipedia.org/wiki/Universally_unique_identifier).
 
@@ -286,7 +298,7 @@ Should be able to create a record:
 
 Commit.
 
-# Model.find (DIY)
+# Model.find
 
 Recall how Mopeds finds a record by id:
 
@@ -398,23 +410,23 @@ def initialize(attrs,selected_files=nil,is_find=false)
 end
 ```
 
-It's probably not better, because `initialize` is a "public API", exposed to Mongoid users. `instantiate` is a "private API", 99% of the time it's used only within the Mongoid project. If the public API and the private API are the same method, a Mongoid user who accidentally uses `Model.new` the wrong way might be surprised instead of getting an error:
+It's probably not better, because `initialize` is a "public API", exposed to Mongoid users. `instantiate` is a "private API", used only within the Mongoid project. If the public API and the private API are the same method, a Mongoid user who accidentally uses `Model.new` the wrong way might be surprised instead of getting an error:
 
 ```ruby
 Event.new({"id" => "1000"},{"user" => "clearly didn't read the documentation"})
 # no error
 ```
 
-Whereas by separating the private API into its own,
+Whereas by separating the private API into its own the user gets an error,
 
 ```ruby
 Event.new({"id" => "1000"},{"user" => "clearly didn't read the documentation"})
 # error
 ```
 
-## Implement
+## Implement Find
 
-Implement `Model.instantiate`
+**Implement** `Model.instantiate(attributes)` to return a model instance. Later `find` will query the database to find the attributes for a document.
 
 Pass: `rspec crud_spec.rb -e 'Model.instantiate'`
 
@@ -426,7 +438,7 @@ Should be able to find a record:
     should have the given attributes
 ```
 
-Implement `Model.find`
+**Implement** `Model.find`. It looks up the database for attributes, and use instantiate to return a model instance.
 
 Pass: `rspec crud_spec.rb -e 'Model.find'`
 
@@ -434,5 +446,10 @@ Pass: `rspec crud_spec.rb -e 'Model.find'`
 Should be able to find a record:
   Model.find
     should be able to find a record by issuing query
+    should be able to find a record by issuing shorthand id query
     should raise Mongoid::RecordNotFoundError if nothing is found for an id
 ```
+
+# Pull Request
+
+Push your code to your own clone, and create a pull request to your partner's.
