@@ -13,7 +13,7 @@ Fork your study partner's my_mongoid repo, and do your assignment there.
 + You should negotiate with your partner to decide how much tests you'll write.
 + Follow the [Github Ruby styleguide](https://github.com/styleguide/ruby)
 + Don't read your partner's code until you are done.
-+ Review the your partner's pull request. If it's good, accept it. If it's not good enough, say why and ask your partner to fix it.
++ Review your partner's pull request. If it's good, accept it. If it's not good enough, say why and ask your partner to fix it.
 + **Be kind and helpful** if your partner's code is terrible :)
 
 # Add Moped As Gem Dependency
