@@ -1,9 +1,3 @@
-To improve:
-
-+ better higher level implementation plan. answer "why" we are implementing this, and how it might tie into later steps
-+ implementation notes: what you might need to know to actually implement this
-
-
 # Implement MyMongoid CRUD
 
 + Create a singleton connection object to handle DB queries.
@@ -292,21 +286,153 @@ Should be able to create a record:
 
 Commit.
 
-# Find
+# Model.find (DIY)
 
-Event.find("abc") == Event.find({"_id" => "abc"})
+Recall how Mopeds finds a record by id:
 
-# Update
+```ruby
+collection.find({"_id" => "1"})
+```
 
-event.update_attributes({}) # use $set
+For our `find` method, we'd want to be able to find a document by using a query:
 
-should do mass-assignment first
+```
+Model.find({"_id" => "abc"})
+```
 
-# Save
+Or using a shorthand:
 
-Model.dirty_fields
-dirty_tracking. hook into write_attribute. reset @dirty_fields upon save.
+```
+Model.find("abc")
+```
 
-# Delete
+## Mongoid::Document#instantiate
 
-event.delete
+Before we implement our own `find`, let's take a look at Mongoid's code. When
+Mongoid fetches a record from the database, it doesn't invoke `Model.new` to
+get an instance. Instead, Mongoid invokes `Model.instantiate`.
+
+Compare `Model.instantiate` with `Model#initialize` below.
+
+`Model.instantiate`:
+
+```ruby
+# Instantiate a new object, only when loaded from the database or when
+# the attributes have already been typecast.
+#
+# @example Create the document.
+#   Person.instantiate(:title => "Sir", :age => 30)
+#
+# @param [ Hash ] attrs The hash of attributes to instantiate with.
+# @param [ Integer ] selected_fields The selected fields from the
+#   criteria.
+#
+# @return [ Document ] A new document.
+#
+# @since 1.0.0
+def instantiate(attrs = nil, selected_fields = nil)
+  attributes = attrs || {}
+  doc = allocate
+  doc.__selected_fields = selected_fields
+  doc.instance_variable_set(:@attributes, attributes)
+  doc.apply_defaults
+  yield(doc) if block_given?
+  doc.run_callbacks(:find) unless doc._find_callbacks.empty?
+  doc.run_callbacks(:initialize) unless doc._initialize_callbacks.empty?
+  doc
+end
+```
+
+`Model#initialize`
+
+```
+# Instantiate a new +Document+, setting the Document's attributes if
+# given. If no attributes are provided, they will be initialized with
+# an empty +Hash+.
+#
+# If a primary key is defined, the document's id will be set to that key,
+# otherwise it will be set to a fresh +BSON::ObjectId+ string.
+#
+# @example Create a new document.
+#   Person.new(:title => "Sir")
+#
+# @param [ Hash ] attrs The attributes to set up the document with.
+#
+# @return [ Document ] A new document.
+#
+# @since 1.0.0
+def initialize(attrs = nil)
+  _building do
+    @new_record = true
+    @attributes ||= {}
+    with(self.class.persistence_options)
+    apply_pre_processed_defaults
+    apply_default_scoping
+    process_attributes(attrs) do
+      yield(self) if block_given?
+    end
+    apply_post_processed_defaults
+    # @todo: #2586: Need to have access to parent document in these
+    #   callbacks.
+    run_callbacks(:initialize) unless _initialize_callbacks.empty?
+  end
+end
+```
+
++ `#initialize`'s self is the model instance. `instantiate`'s self is the model class.
++ `#initialize` sets `@new_record` to be true.
++ `#initialize` uses `#process_attributes`, and `instantiate` sets `@attributes` directly.
++ Both invokes the `initialize` lifecycle callback. (Is this surprising?)
++ The two methods handle default values differently (we'll ignore that).
++ `instantiate` may return a document whose selected fields is only a subset of the complete document. (maybe you want 3 out of 10 fields).
+
+Why does Mongoid have two methods to do essentially the same thing? Would it be better to unify the API this way:
+
+```ruby
+def initialize(attrs,selected_files=nil,is_find=false)
+  if is_find
+    ...
+  else
+    ...
+  end
+end
+```
+
+It's probably not better, because `initialize` is a "public API", exposed to Mongoid users. `instantiate` is a "private API", 99% of the time it's used only within the Mongoid project. If the public API and the private API are the same method, a Mongoid user who accidentally uses `Model.new` the wrong way might be surprised instead of getting an error:
+
+```ruby
+Event.new({"id" => "1000"},{"user" => "clearly didn't read the documentation"})
+# no error
+```
+
+Whereas by separating the private API into its own,
+
+```ruby
+Event.new({"id" => "1000"},{"user" => "clearly didn't read the documentation"})
+# error
+```
+
+## Implement
+
+Implement `Model.instantiate`
+
+Pass: `rspec crud_spec.rb -e 'Model.instantiate'`
+
+```
+Should be able to find a record:
+  Model.instantiate
+    should return a model instance
+    should return an instance that's not a new_record
+    should have the given attributes
+```
+
+Implement `Model.find`
+
+Pass: `rspec crud_spec.rb -e 'Model.find'`
+
+```
+Should be able to find a record:
+  Model.find
+    should be able to find a record by issuing query
+    should raise Mongoid::RecordNotFoundError if nothing is found for an id
+```
