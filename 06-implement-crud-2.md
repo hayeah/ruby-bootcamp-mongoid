@@ -5,8 +5,8 @@ We'll complete CRUD by implementing record update and deletion.
 # Objectives
 
 + Fields dirty tracking. Which fields had been written to?
-+ '#save' for saving changes to a record.
-+ '#update_attributes'
++ '#save' for saving field changes to a record.
++ '#update_attributes' for updating fields directly.
 + '#delete' for removing a record.
 
 # How Mongoid Updates A Record
@@ -51,6 +51,8 @@ So to implement record udpate, we need to
 1. Keep track of which fields had changed.
 2. When `#save` is invoked, issue a Moped update query to the database.
 
+We need to extend the `#save` method that we implemented earlier for `#create` to support record updating.
+
 # How Mongoid Implements Save
 
 We can find `#save` in `Mongoid::Persistable::Savable`:
@@ -66,7 +68,7 @@ def save(options = {})
 end
 ```
 
-Pretty straightforward. For a persisted record, it calls `#update_document`. Let's look at that:
+Pretty straightforward. For a new record, it inserts a new record. For a persisted record, it calls `#update_document` to update the document in the database. Let's look at `#update_document`:
 
 ```ruby
 def update_document(options = {})
@@ -85,22 +87,24 @@ def update_document(options = {})
 end
 ```
 
-This looks scary. A lot of the complexity comes from [document embedding](http://mongoid.org/en/mongoid/docs/relations.html#embeds_one). For our case we could be simplify `update_document` into something like:
+This looks scary. A lot of the complexity comes from [document embedding](http://mongoid.org/en/mongoid/docs/relations.html#embeds_one). Since we are not doing embedding yet, we could be simplify `#update_document` quite a bit:
 
 ```ruby
 def update_document
   # get the field changes
   updates = atomic_updates
+
+  # make the update query
   unless updates.empty?
     selector = { "_id" => self.id }
-    self.class.collection.find(selector).update(updates)
+    collection.find(selector).update(updates)
   end
 end
 ```
 
 The simplified version:
 
-+ Removed `readonly` check
++ Removes the `readonly` check
 + Assumes that we won't have conflicting atomic updates (we'll make sure MyMongoid's design avoids conflicting updates)
 + Assumes that the selector is always for the document itself (this is ok, until we add embedded document)
 + Assumes that the collection we query with is the model (this is ok, until we add embedded document)
@@ -120,7 +124,9 @@ Now we just need to figure ot what `atomic_updates` does.
 => {"$set"=>{"public"=>false, "type"=>"AnotherType"}}
 ```
 
-As you ca nsee `#atomic_updates` generates the Mongo [`$set` field update operation](http://docs.mongodb.org/manual/reference/operator/update/set/).
+As you can see `#atomic_updates` generates the Mongo [`$set` update operation](http://docs.mongodb.org/manual/reference/operator/update/set/).
+
+**Exercise** Think about how you might implement document embedding.
 
 # Implement Document Update
 
@@ -129,7 +135,7 @@ We'll break this feature into two parts:
 1. Keep track of which fields had changed.
 2. When `#save` is invoked, issue a Moped update query.
 
-## Dirty Tracking
+## Implement Dirty Tracking
 
 Dirty tracking keeps a record of what attributes had changed by keeping the original unchanged values in a hash. In the next part, we'll use this to generate the `$set` update operation.
 
@@ -150,13 +156,14 @@ Should be able to update a record
 
 Pass: rspec crud_spec.rb -e '#changed?'
 
+```
 Should track changes made to a record
   #changed?
     should be false for a newly instantiated record
     should be true if a field changed
+```
 
-
-Note: An odd behaviour of Mongoid's `#changed_attributes` is that it considers attributes passed to '#initialize' as changes:
+**Note**: An odd behaviour of Mongoid's `#changed_attributes` is that it considers attributes passed to '#initialize' as changes:
 
 ```ruby
 [23] pry(main)> Event.new({"public" => true, "id" => "1"})
@@ -167,12 +174,6 @@ Note: An odd behaviour of Mongoid's `#changed_attributes` is that it considers a
 => {"_id"=>nil, "public"=>nil}
 [26] pry(main)> e.changes
 => {"_id"=>[nil, "1"], "public"=>[nil, true]}
-
-But because it is a `new_record`, `atomic_updates` returns an empty hash:
-
-```ruby
-[27] pry(main)> e.atomic_updates
-=> {}
 ```
 
 Because Mongoid generates an id for a new record, `changed?` is true for a new record:
@@ -184,35 +185,127 @@ Because Mongoid generates an id for a new record, `changed?` is true for a new r
 => true
 ```
 
-## Save
+But because it is a `new_record`, `atomic_updates` returns an empty hash:
 
-`#atomic_updates`
-  should return {} if nothing changed
-  should return {} if record is not a persisted document
-`#update_document`
-`#save`
-  modify it to update a document
-`#update_attributes`
+```ruby
+[27] pry(main)> e.atomic_updates
+=> {}
+```
+
+## Reset Dirty Fields
+
+Immediately after saving a record, we should reset `#changed_attributes` because the changes had already been made. Implementing this ensures that `Model.create(data)` returns a record that returns false for '#changed?'.
+
+**Modify** `#save` to reset changed attributes to empty hash after saving.
+
+Pass: `rspec crud_spec.rb -e "updating database: #save should have no changes"`
+
+```
+Should be able to update a record:
+  updating database:
+    #save
+      should have no changes right after persisting
+```
+
+## Implement Record Update
+
+We'll implement record updating by completing the simplified `update_document`:
+
+```ruby
+def update_document
+  # get the field changes
+  updates = atomic_updates
+
+  # make the update query
+  unless updates.empty?
+    selector = { "_id" => self.id }
+    collection.find(selector).update(updates)
+  end
+end
+```
+
+When an update occurs, the resulting query is something like:
+
+```ruby
+field_changes = {"field1" => 1, "field2" => 2}
+collection.find({"id" => id}).update({"$set" => field_changes})
+```
+
+**Implement** `#atomic_updates` to generate $set update operation.
+
+Hint: `#atomic_updates` should ignore changes to `_id`. You can't change the id of a Mongoid record.
+
+```
+[47] pry(main)> e = Event.find("1978774765")
+=> #<Event _id: 1978774765, type: "PushEvent" ...>
+[48] pry(main)> e.id = "23"
+=> "23"
+[49] pry(main)> e.changes
+=> {"_id"=>["1978774765", "23"]}
+[50] pry(main)> e.atomic_updates
+=> {}
+[51] pry(main)> e.save
+=> true
+[52] pry(main)> e = Event.find("23")
+Mongoid::Errors::DocumentNotFound:
+```
+
+Pass: `rspec crud_spec.rb -e "#atomic_updates"`
+
+```
+Should be able to update a record
+  #atomic_updates
+    should return {} if nothing changed
+    should return {} if record is not a persisted document
+    should generate the $set update operation to update a persisted document
+```
+
+**Implement** `#update_document` to update the document in database
+
+Pass: `rspec crud_spec.rb -e "#update_document"`
+
+```
+Should be able to update a record:
+  updating database:
+    #update_document
+      should not issue query if nothing changed
+      should update the document in database if there are changes
+```
+
+**Modify** `#save` to save the changes of a persisted document (before it's only used for `#create`).
+
+Pass: `rspec crud_spec.rb -e "updating database: #save"`
+
+```
+Should be able to update a record:
+  updating database:
+    #save
+      should save the changes if a document is already persisted
+```
+
+**Implement** `#update_attributes` (see [Persistence](http://mongoid.org/en/mongoid/docs/persistence.html))
+
+```
+Should be able to update a record:
+  updating database:
+    #update_attributes
+      should change and persiste attributes of a record
+```
 
 # Delete
 
+**Implement** `#delete`
 
+Pass: `rspec crud_spec.rb -e "#delete"`
 
-# Update
-
-event.update_attributes({}) # use $set
-
-should do mass-assignment first
-
-# Save
-
-Model.dirty_fields
-dirty_tracking. hook into write_attribute. reset @dirty_fields upon save.
-
-# Delete
-
-event.delete
+```
+Should be able to delete a record:
+  #delete
+    should delete a record from db
+    should return true for deleted?
+```
 
 # Bonus
 
 + Mongoid's `add_field` class method invokes `create_dirty_methods` to create methods related to dirty tracking. Read Mongoid's source code to read what those methods are, and implement them.
++ Implement `#reload` to fetch attributes from database and reload the object.
