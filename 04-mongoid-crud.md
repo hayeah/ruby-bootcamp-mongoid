@@ -426,7 +426,7 @@ Remember that `id` is a Mongoid alias for `_id`. It wouldn't work if you try to 
 To update the record we've created:
 
 ```ruby
-[65] pry(main)> c.update("$set" => {"payload" => "bbbb"})
+[65] pry(main)> events.find({"_id" => "1"}).update("$set" => {"payload" => "bbbb"})
 => {"updatedExisting"=>true, "n"=>1, "connectionId"=>133, "err"=>nil, "ok"=>1.0}
 [66] pry(main)> events.find({"_id" => "1"}).first
 => {"_id"=>"1", "payload"=>"bbbb"}
