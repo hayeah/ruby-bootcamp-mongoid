@@ -7,6 +7,7 @@ In this lesson we'll learn about how Mongoid uses `ActiveSupport::Callbacks` to 
 + Look at how `Mongoid::Interceptable` uses ActiveSupport to implement callbacks.
 + Understand `ActiveSupport::Callbacks`
 + Understand how ActiveRecord uses `ActiveModel::Callbacks` to implement callbacks.
++ Understand how to use callbacks to separate out cross-cutting concerns.
 + Practice using `ActiveSupport::Callbacks`
 
 # Mongoid::Interceptable
