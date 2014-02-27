@@ -291,6 +291,7 @@ In Mongoid, if you set the `id` attribute of a model, it actually sets the `_id`
 + Make it possible to alias a field by specifying the ":as" option. e.g. `field :_id, :as => "id"`.
   + `rspec declare_field_spec.rb -e "aliases a field with the :as option"`
 + For all MyMongoid models, make "id" the alias for "_id".
+  + `rspec declare_field_spec.rb -e "by default aliases '_id' as 'id'"`
 
 Commit your work.
 
