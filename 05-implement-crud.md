@@ -224,7 +224,7 @@ event.new_record? # => false
 
 Pass `rspec crud_spec.rb -e 'model collection'`
 
-Hint: Use [ActiveSupport's tableize](http://api.rubyonrails.org/classes/ActiveSupport/Inflector.html#method-i-tableize) to convert a class name like "Event" to collection name "events". (Add version 3.0.0 as dependency to your gemspec.) `require "active_support/inflector"`
+Hint: Use [ActiveSupport's tableize](http://api.rubyonrails.org/classes/ActiveSupport/Inflector.html#method-i-tableize) to convert a class name like "Event" to collection name "events". (Add version 4.0.3 as dependency to your gemspec.) `require "activesupport/inflector"`
 Hint: Use [`Moped::Session#[]`](https://github.com/mongoid/moped/blob/master/lib/moped/session.rb#L42-L51) to get a collection by name.
 
 ```
