@@ -472,7 +472,7 @@ Go to your [profile page](https://travis-ci.org/profile) and toggle the `my_mong
 Add the build status image to your `README.md`:
 
 ```
-![[Build Status]](https://travis-ci.org/{your_github_account}/my_mongoid)
+[![Build Status](your_travisCI_status_image_url)](https://travis-ci.org/{your_github_account}/my_mongoid)
 ```
 
 Commit and push. TravisCI should start building. Every time you push to the repository, TravisCI would start a new build.
