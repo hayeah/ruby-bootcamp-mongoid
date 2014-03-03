@@ -1,10 +1,6 @@
 # DIY Callbacks Part 1 - Minimal Implementation
 
-We'll implement `ActiveSupport::Callbacks` in a series of lessons. In this lesson we'll implement a minimal version, with the methods:
-
-+ `.define_callbacks`
-+ `.set_callback`
-+ `#run_callbacks`
+We'll implement `ActiveSupport::Callbacks` in a series of lessons. In this lesson we'll start with something simple.
 
 # ActiveSupport Implementation Overview
 
@@ -23,14 +19,16 @@ A callback might be specified as a symbol (e.g. `before_save`). The `Callback` h
 
 The `CallbackChain` class is basically a fancy `Array` that transforms a number of added callbacks into lambdas, and calls them in order. `CallbackChain#compile` [builds a callable lambda](https://github.com/rails/rails/blob/409fbffc92dfe612db129d5bb4e99a8807854958/activesupport/lib/active_support/callbacks.rb#L511-L513) that optimizes the callback chain.
 
-# Simplified Callbacks
+We'll do `#compile` later. Ignore it for now.
+
+# Implementation Overview
 
 `ActiveSupport::Callbacks` is pretty complicated. To keep it simple
 
 + We'll only support symbols as callbacks
 + We won't implement callbacks chain compilation (we'll do that in a later lesson)
 
-In this lesson we'll support only the before callback-- just enough to make the following work:
+In this lesson we'll support only the before callback. Just enough to make the following work:
 
 ```ruby
 class Model
@@ -38,7 +36,9 @@ class Model
   set_callback :save, :before, :before_save
 
   def save
-    run_callbacks(:save)
+    run_callbacks(:save) do
+      save_to_db
+    end
   end
 
   def before_save
@@ -50,18 +50,7 @@ model = Model.new
 model.save # => "before save"
 ```
 
-
-# Defining the DSL
-
-**Implement** Create the `MyMongoid::MyCallbacks` module, so when it's included the following are available:
-
-+ `.define_callbacks`
-+ `.set_callback`
-+ `#run_callbacks`
-
-Pass:
-
-# `.define_callbacks`
+# define_callbacks
 
 It should declare a class attribute to store the callbacks in a `CallbackChain` object.
 
@@ -80,7 +69,7 @@ MyMongoid::MyCallbacks
     should initially return an instance of CallbackChain
 ```
 
-# Callback
+# Callback Class
 
 When we `set_callback` with a method name like this:
 
@@ -88,14 +77,7 @@ When we `set_callback` with a method name like this:
 klass.set_callback(:save,:before,:before_save)
 ```
 
-We don't want to store the callback directly to `CallbackChain` as a symbol. We will use a `Callback` class to provide a layer of abstraction.
-
-```
-# The Callback instance is created by set_callback.
-cb = Callback.new(filter=:before_save,kind=:before)
-# Later when run_callbacks runs the callback, it gets the object as the target.
-cb.invoke(object)
-```
+We don't want to store the callback directly in `CallbackChain` as a symbol. We will use a `Callback` class to provide a layer of abstraction.
 
 **Implement** The `MyMongoid::MyCallbacks::Callback` class.
 
@@ -107,6 +89,13 @@ The method signature for `#initialize` is:
 Callback#initialize(filter,kind)
 ```
 
+Example:
+```
+# The Callback instance is created by set_callback.
+cb = Callback.new(:before_save,:before)
+# Later when run_callbacks runs the callback, it gets the object as the target.
+cb.invoke(object)
+```
 Pass: `rspec callbacks_spec.rb -e 'MyMongoid::MyCallbacks::Callback'`
 
 ```
