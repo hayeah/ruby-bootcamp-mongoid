@@ -1,6 +1,6 @@
 # DIY Callbacks Part 1 - Minimal Implementation
 
-We'll implement `ActiveSupport::Callbacks` in a series of lessons. In this lesson we'll start with something simple.
+We'll implement `ActiveSupport::Callbacks` in a series of lessons. In this lesson we'll start with a simplified version.
 
 # ActiveSupport Implementation Overview
 
@@ -167,3 +167,8 @@ MyMongoid::MyCallbacks
   #run_callbacks
     should invoke the callback chain
 ```
+
+# Bonus
+
+**Implement** Extend `Callback#invoke(target)` to support String, Proc, and Object as filter.
+
