@@ -87,4 +87,4 @@ Should define lifecycle callbacks
     should run callbacks when saving a persisted record
 ```
 
-Exercise: Modify other CRUD methods on your own.
+Bonus: Modify other CRUD methods to run the callbacks (probably tedious).
