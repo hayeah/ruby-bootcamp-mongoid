@@ -127,6 +127,8 @@ cbchain.invoke(target) {
 
 Pass: `rspec callbacks_spec.rb -e 'MyMongoid::MyCallbacks::CallbackChain'`
 
+Note: the first before callback added should be called first, then the second. (It's the reverse ordering for after callbacks.)
+
 ```
 MyMongoid::MyCallbacks
   MyMongoid::MyCallbacks::CallbackChain
