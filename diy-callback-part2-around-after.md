@@ -1,6 +1,6 @@
 # DIY Callbacks Part 2 - Around & After Callbacks
 
-In the last lesson we only imlemented the before callback. In this lesson, we'll implement the full callback chain with a recursive algorithm.
+In the last lesson we only implemented the before callback. In this lesson, we'll implement the full callback chain with a recursive algorithm.
 
 # Overview
 
@@ -157,19 +157,6 @@ Let's create a recursive helper `CallbackChain#_invoke(i,target,block)`
 + `i` is the index number of the i-th callback in the CallbackChain.
 + `block` is the block of `run_callblack`.
 
-The recursive call stack would look like:
-
-```
-invoke
-  _invoke
-    callback.invoke(target)
-      _invoke
-        callback.invoke(target)
-          ...
-            _invoke
-              block.call
-```
-
 **Implement** Recursively run the `:before` callbacks.
 
 Example:
@@ -211,6 +198,7 @@ invoke
       before_2
       _invoke
         block.call
+          _save
 ```
 
 Pass: `rspec callbacks-02_spec.rb -e 'run before callbacks recursively'`
@@ -246,6 +234,7 @@ invoke
       _invoke
           _invoke
             block.call
+              _save
         after_2
     after_1
 ```
@@ -302,6 +291,7 @@ invoke
             yield {
               _invoke
                 block.call
+                  _save
             }
             around_2_bottom
       }
@@ -318,4 +308,4 @@ MyMongoid::MyCallbacks
 
 # Bonus
 
-+ If a before callback returns `false` (and only `false`, not nil, [], or anything else), then it should terminate the recursive callback chain.
++ If a before callback returns `false` (and only `false`, not nil, [], or anything else), then it should terminate the callback chain.
