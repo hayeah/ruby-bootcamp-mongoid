@@ -149,7 +149,21 @@ Continuation is an extremely powerful idea. Here's a short list of what continua
 
 # Bottom-up Callback Chain Compilation
 
-Our compilation process works is slightly different from the above. We build the nested lambda by taking the `run_callbacks` block and wrapping it for each callback in the chain. We'll start with the last added callback first. Here's an example:
+Our compilation process is slightly different from the above. We build the nested lambda by taking the `run_callbacks` block as the initial continuation, For each callback in the chain we create a new continuation that calls the previous continuation. We'll do that in reverse, starting with the last added callback first.
+
+Here's an example:
+
+Supposed we declare these callbacks (the order for kinds of callbacks doesn't matter. A `:before` callback can be added after an `:around` callback):
+
+```
+set_callback :save, :after, :after_1
+set_callback :save, :before, :before_1
+set_callback :save, :around, :around_1
+set_callback :save, :after, :after_2
+set_callback :save, :before, :before_2
+```
+
+Then the build-up process is like:
 
 ```ruby
 # &main is the run_callbacks body
@@ -211,7 +225,7 @@ k5 = lambda { |target,&main|
 }
 ```
 
-Pay attention to how the `k3` continuation wraps the around callback around `&main` before passing it into `k2`. To illustrate the change, let's rename the block argument to `main2` to denote the wrapped `main`:
+Pay attention to how the `k3` continuation wraps the `:around` callback around `&main` before passing it into `k2`. To illustrate this change more clearly, let's rename the block argument to `main2` to denote the wrapped `&main`:
 
 ```ruby
 k5 = lambda { |target,&main|
@@ -234,6 +248,8 @@ k5 = lambda { |target,&main|
   after_1_cb.call(target)
 }
 ```
+
+Once the chain is compiled, `run_callbacks` can run the callbacks by calling `k5.call(self,&block)`
 
 # Callback#compile
 
