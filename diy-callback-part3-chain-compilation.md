@@ -395,19 +395,35 @@ class Foo
 end
 ```
 
-and the compiled chain is like:
+The around callback is a bit trickier. Let's build the continuations step by step:
+
+```
+k0 = lambda { |target,&main| main.call }
+k1 = lambda { |target,&main|
+  k0.call(target) do
+    compiled_around_2_callback.call(target,&main)
+  end
+}
+k2 = lambda { |target,&main|
+  k1.call(target) do
+    compiled_around_1_callback.call(target,&main)
+  end
+}
+```
+
+And the compilation result is:
 
 ```ruby
-lambda { |target,&main|
-  compiled_around_1_callback_call(target) {
-    lambda { |target,&main|
-      compiled_around_2_callback_call(target) {
-        lambda { |_,&main|
-          main.call
-        }.call(target,&main)
-      }
-    }.call(target,&main)
-  }
+lambda { |target,&main| # k2
+  lambda { |target,&main| # k1
+    lambda { |target,&main| # k0
+      main.call
+    }.call(target) do
+      compiled_around_2_callback.call(target,&main)
+    end
+  }.call(target) do
+    compiled_around_1_callback.call(target,&main)
+  end
 }
 ```
 
@@ -419,7 +435,7 @@ MyMongoid::MyCallbacks
     should call the around methods in order when compiled lambda is run
 ```
 
-# Compile Around Callbacks
+# Compile After Callbacks
 
 **Implement** `CallbackChain#compile` should support after callbacks
 
