@@ -151,16 +151,14 @@ Continuation is an extremely powerful idea. Here's a short list of what continua
 
 Our compilation process is slightly different from the above. We build the nested lambda by taking the `run_callbacks` block as the initial continuation, For each callback in the chain we create a new continuation that calls the previous continuation. We'll do that in reverse, starting with the last added callback first.
 
-Here's an example:
-
-Supposed we declare these callbacks (the order for kinds of callbacks doesn't matter. A `:before` callback can be added after an `:around` callback):
+Supposed we declare these callbacks:
 
 ```
-set_callback :save, :after, :after_1
 set_callback :save, :before, :before_1
-set_callback :save, :around, :around_1
-set_callback :save, :after, :after_2
 set_callback :save, :before, :before_2
+set_callback :save, :around, :around_1
+set_callback :save, :after, :after_1
+set_callback :save, :after, :after_2
 ```
 
 Then the build-up process is like:
@@ -183,8 +181,8 @@ k2 = lambda { |target,&main|
 
 # around
 k3 = lambda { |target,&main|
-  k2.call(target) do
-    around_1_cb.call(target,&main)
+  around_1_cb.call(target) do
+    k2.call(target,&main)
   end
 }
 
@@ -208,40 +206,16 @@ k5 = lambda { |target,&main|
   k4 = lambda { |target,&main|
     before_1_cb.call(target)
     k3 = lambda { |target,&main|
-      k2 = lambda { |target,&main|
-        k1 = lambda { |target,&main|
-          before_2_cb.call(target)
-          k0 = lambda { |_,&main|
-            main.call
+      around_1_cb.call(target) do
+        k2 = lambda { |target,&main|
+          k1 = lambda { |target,&main|
+            before_2_cb.call(target)
+            k0 = lambda {|_,&main|
+              main.call
+            }.call(target,&main)
           }.call(target,&main)
+          after_2_cb.call(target)
         }.call(target,&main)
-        after_2_cb.call(target)
-      }.call(target) do
-        around_1_cb.call(target,&main)
-      end
-    }.call(target,&main)
-  }.call(target,&main)
-  after_1_cb.call(target)
-}
-```
-
-Pay attention to how the `k3` continuation wraps the `:around` callback around `&main` before passing it into `k2`. To illustrate this change more clearly, let's rename the block argument to `main2` to denote the wrapped `&main`:
-
-```ruby
-k5 = lambda { |target,&main|
-  k4 = lambda { |target,&main|
-    before_1_cb.call(target)
-    k3 = lambda { |target,&main|
-      k2 = lambda { |target,&main2|
-        k1 = lambda { |target,&main2|
-          before_2_cb.call(target)
-          k0 = lambda { |_,&main2|
-            main2.call
-          }.call(target,&main)
-        }.call(target,&main)
-        after_2_cb.call(target)
-      }.call(target) do # this is main2
-        around_1_cb.call(target,&main)
       end
     }.call(target,&main)
   }.call(target,&main)
@@ -278,8 +252,6 @@ MyMongoid::MyCallbacks
     should invoke the callback method
     should invoke the callback method with a block if given one
 ```
-
-
 
 # Compile Before Callbacks
 
@@ -381,48 +353,28 @@ class Foo
   set_callback :save, :around, :around_2
 
   def around_1
-    around_1_top
     yield
-    around_1_bottom
   end
 
   def around_2
-    around_2_top
     yield
-    around_2_bottom
   end
   # ...
 end
 ```
 
-The around callback is a bit trickier. Let's build the continuations step by step:
-
-```
-k0 = lambda { |target,&main| main.call }
-k1 = lambda { |target,&main|
-  k0.call(target) do
-    compiled_around_2_callback.call(target,&main)
-  end
-}
-k2 = lambda { |target,&main|
-  k1.call(target) do
-    compiled_around_1_callback.call(target,&main)
-  end
-}
-```
-
-And the compilation result is:
+and the compiled chain is like:
 
 ```ruby
-lambda { |target,&main| # k2
-  lambda { |target,&main| # k1
-    lambda { |target,&main| # k0
-      main.call
-    }.call(target) do
-      compiled_around_2_callback.call(target,&main)
-    end
-  }.call(target) do
-    compiled_around_1_callback.call(target,&main)
+lambda { |target,&main|
+  compiled_around_1_callback.call(target) do
+    lambda { |target,&main|
+      compiled_around_2_callback.call(target) do
+        lambda { |target,&main|
+          main.call
+        }.call(target,&main)
+      end
+    }.call(target,&main)
   end
 }
 ```
