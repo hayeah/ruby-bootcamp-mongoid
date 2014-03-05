@@ -150,6 +150,21 @@ This pattern is very common in recursive algorithms.
 + States are kept in arguments
 + To change the states, make recursive calls with different arguments
 
+# Order of set_callback Declarations
+
+For simplicity, we'll assume that all the `:before` callbacks are added to the chain, then the `:around` callbacks, then lastly the `:after` callbacks.
+
+```ruby
+set_callback :save, :before, ...
+set_callback :save, :before
+
+set_callback :save, :around, ...
+set_callback :save, :around, ...
+
+set_callback :save, :after, ...
+set_callback :save, :after, ...
+```
+
 # Implement Before Callbacks Recursively
 
 Let's create a recursive helper `CallbackChain#_invoke(i,target,block)`
