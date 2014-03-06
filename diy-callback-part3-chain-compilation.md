@@ -436,3 +436,7 @@ MyMongoid::MyCallbacks
     should invoke #compile
     should run callback methods
 ```
+
+# Bonus
+
++ Implement [`define_model_callbacks`](http://api.rubyonrails.org/classes/ActiveModel/Callbacks.html#method-i-define_model_callbacks)
