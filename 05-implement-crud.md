@@ -231,7 +231,7 @@ Hint: Use [`Moped::Session#[]`](https://github.com/mongoid/moped/blob/master/lib
 Should be able to create a record:
   model collection:
     Model.collection_name
-      should use active support's titleize method
+      should use active support's tableize method
     Model.collection
       should return a model's collection
 ```
